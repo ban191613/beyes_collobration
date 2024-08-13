@@ -21,20 +21,24 @@ def ym(x, u):
 
 
 def yf(x, t, n, mean=0, std=0.1):
-    """物理模型
+    """物理模型  插入一个阶跃函数
 
     Args:
         x (torch.tensor): 变量
         t (torch.tensor): 时间
-
+        n (int): 时间阈值
+        mean (float, optional): 均值. 默认为 0.
+        std (float, optional): 标准差. 默认为 0.1.
     Returns:
         torch.tensor:因变量
     """
+    # t=n/2 (0.1 if t >= n / 2 else 0)
+    step_function = torch.where(t >= n / 2, torch.tensor(0.1), torch.tensor(0.0))
+
     y = (
         0.6
-        + 1.54
-        * torch.sin(x[:, 0] * (1 + 0.1 * torch.sin(t * 2 * math.pi / n)) * math.pi)
-        + 3 * (0.703 + 0.1 * torch.sin(t * 2 * math.pi / n)) * x[:, 1] ** 3
+        + 1.54 * torch.sin(x[:, 0] * (1 - 0.3 * step_function) * math.pi)
+        + 3 * (0.703 + step_function) * x[:, 1] ** 3
         + std * torch.randn(x.shape[0])
         + mean
     )

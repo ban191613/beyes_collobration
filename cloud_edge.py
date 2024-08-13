@@ -118,6 +118,7 @@ class cloud_edge:
         )
         self.cloud_koh.set_u(mean)
         self.cloud_koh.set_prior(mean, cov)
+
         # self.cloud_koh.set_random_walk(cov)
 
         # self.cloud_koh.plot_sample()
@@ -142,7 +143,8 @@ class cloud_edge:
         )
         self.edge_koh.set_u(mean)
         self.edge_koh.set_prior(mean, cov)
-        self.edge_koh.set_random_walk(cov)
+
+        # self.edge_koh.set_random_walk(cov)
 
         # self.edge_koh.plot_sample()
 
