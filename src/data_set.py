@@ -33,7 +33,7 @@ class data_set:
         self.device_num = device_num
         self.edge_iter = edge_iter
         self.x_dim = value_dim
-        self.edge_yf = model_yf
+        self.model_yf = model_yf
 
         self.edge_i = 0
 
@@ -53,14 +53,18 @@ class data_set:
             dtype=self.dtype,
             requires_grad=False,
         )
-        self.f_y = self.edge_yf(self.f_x)
+        t = np.zeros((self.cloud_num + self.device_num * self.edge_iter, 1), dtype=int)
+        t = torch.tensor(t, requires_grad=False)
+        for i in range(self.edge_iter):
+            t[self.cloud_num + i * self.edge_iter : (i + 1) * self.edge_iter, :] = i
+        self.f_y = self.model_yf(self.f_x, t, self.edge_iter)
         # 产生用于预测的数据
         self.pre_f_x = torch.rand(
             (self.edge_iter, self.x_dim),
             dtype=self.dtype,
             requires_grad=False,
         )
-        self.pre_f_y = self.edge_yf(self.pre_f_x)
+        self.pre_f_y = self.model_yf(self.pre_f_x, t, self.edge_iter)
 
     def cloud_get(self):
         """每次云侧迭代的数据

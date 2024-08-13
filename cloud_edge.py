@@ -1,4 +1,4 @@
-import datetime
+import os
 import numpy as np
 from cloud_koh import cloud_koh
 
@@ -96,25 +96,13 @@ class cloud_edge:
         self.edge_active_learning = active_learning
 
         self.JITTER = 1e-4
-
+        filename = "./runs"
+        index = 0
+        while os.path.exists(filename + str(index) if index > 0 else filename):
+            index = index + 1
         self.writer = SummaryWriter(
-            log_dir=("./runs" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
+            log_dir=(filename + str(index) if index > 0 else filename)
         )
-
-        self.record_cloud_mean = []
-        self.record_cloud_cov = []
-
-        self.record_edge_mean = []
-        self.record_edge_cov = []
-
-        self.record_edge_pre_m_mean = []
-        self.record_edge_pre_m_var = []
-        self.record_edge_pre_b_mean = []
-        self.record_edge_pre_b_var = []
-
-        self.record_edge_tre_y = []
-        self.record_edge_pre_mean = []
-        self.record_edge_pre_var = []
 
     def cloud(self):
         self.cloud_koh.data_m(self.cloud_ym)  # 对机理模型进行抽样
@@ -130,7 +118,7 @@ class cloud_edge:
         )
         self.cloud_koh.set_u(mean)
         self.cloud_koh.set_prior(mean, cov)
-        self.cloud_koh.set_random_walk(cov)
+        # self.cloud_koh.set_random_walk(cov)
 
         # self.cloud_koh.plot_sample()
 
@@ -215,86 +203,86 @@ class cloud_edge:
             i,
         )
 
-    def plot_cloud_edge(self):
-        x = range(self.edge_iter)
-        fig, axs = plt.subplots(6, 1, figsize=(20, 10))
-        # 参数一
-        cloud = [row[0] for row in self.record_cloud_mean]
-        edge = [row[0] for row in self.record_edge_mean]
-        axs[0].plot(x, cloud)
-        axs[0].plot(x, edge)
-        # 参数二
-        cloud = [row[1] for row in self.record_cloud_mean]
-        edge = [row[1] for row in self.record_edge_mean]
-        axs[1].plot(x, cloud)
-        axs[1].plot(x, edge)
+    # def plot_cloud_edge(self):
+    #     x = range(self.edge_iter)
+    #     fig, axs = plt.subplots(6, 1, figsize=(20, 10))
+    #     # 参数一
+    #     cloud = [row[0] for row in self.record_cloud_mean]
+    #     edge = [row[0] for row in self.record_edge_mean]
+    #     axs[0].plot(x, cloud)
+    #     axs[0].plot(x, edge)
+    #     # 参数二
+    #     cloud = [row[1] for row in self.record_cloud_mean]
+    #     edge = [row[1] for row in self.record_edge_mean]
+    #     axs[1].plot(x, cloud)
+    #     axs[1].plot(x, edge)
 
-        # 参数一方差
-        cloud = [matrix[0] for matrix in self.record_cloud_cov]
-        edge = [matrix[0] for matrix in self.record_edge_cov]
-        axs[2].plot(x, cloud)
-        axs[2].plot(x, edge)
+    #     # 参数一方差
+    #     cloud = [matrix[0] for matrix in self.record_cloud_cov]
+    #     edge = [matrix[0] for matrix in self.record_edge_cov]
+    #     axs[2].plot(x, cloud)
+    #     axs[2].plot(x, edge)
 
-        # 参数二方差
+    #     # 参数二方差
 
-        cloud = [matrix[1, 1] for matrix in self.record_cloud_cov]
-        edge = [matrix[1, 1] for matrix in self.record_edge_cov]
-        axs[3].plot(x, cloud)
-        axs[3].plot(x, edge)
+    #     cloud = [matrix[1, 1] for matrix in self.record_cloud_cov]
+    #     edge = [matrix[1, 1] for matrix in self.record_edge_cov]
+    #     axs[3].plot(x, cloud)
+    #     axs[3].plot(x, edge)
 
-        # m，b，预测
-        edge_pre_m_mean = [row.item() for row in self.record_edge_pre_m_mean]
-        edge_pre_m_var = [row.item() for row in self.record_edge_pre_m_var]
-        edge_pre_b_mean = [row.item() for row in self.record_edge_pre_b_mean]
-        edge_pre_b_var = [row.item() for row in self.record_edge_pre_b_var]
-        edge_pre_mean = [row.item() for row in self.record_edge_pre_mean]
-        edge_pre_var = [row.item() for row in self.record_edge_pre_var]
+    #     # m，b，预测
+    #     edge_pre_m_mean = [row.item() for row in self.record_edge_pre_m_mean]
+    #     edge_pre_m_var = [row.item() for row in self.record_edge_pre_m_var]
+    #     edge_pre_b_mean = [row.item() for row in self.record_edge_pre_b_mean]
+    #     edge_pre_b_var = [row.item() for row in self.record_edge_pre_b_var]
+    #     edge_pre_mean = [row.item() for row in self.record_edge_pre_mean]
+    #     edge_pre_var = [row.item() for row in self.record_edge_pre_var]
 
-        edge_tre_y = [row.item() for row in self.record_edge_tre_y]
-        edge_error = [t - p for t, p in zip(edge_tre_y, edge_pre_mean)]
+    #     edge_tre_y = [row.item() for row in self.record_edge_tre_y]
+    #     edge_error = [t - p for t, p in zip(edge_tre_y, edge_pre_mean)]
 
-        axs[4].errorbar(
-            x,
-            edge_pre_m_mean,
-            edge_pre_m_var,
-            label="Computational model value",
-            fmt="g-",
-            alpha=0.2,
-        )
-        axs[4].errorbar(
-            x,
-            edge_pre_b_mean,
-            yerr=edge_pre_b_var,
-            label="Computational model",
-            fmt="b-",
-            alpha=0.2,
-        )
+    #     axs[4].errorbar(
+    #         x,
+    #         edge_pre_m_mean,
+    #         edge_pre_m_var,
+    #         label="Computational model value",
+    #         fmt="g-",
+    #         alpha=0.2,
+    #     )
+    #     axs[4].errorbar(
+    #         x,
+    #         edge_pre_b_mean,
+    #         yerr=edge_pre_b_var,
+    #         label="Computational model",
+    #         fmt="b-",
+    #         alpha=0.2,
+    #     )
 
-        axs[4].errorbar(
-            x,
-            edge_pre_mean,
-            yerr=edge_pre_var,
-            label="Predictive model",
-            fmt="o-",
-            alpha=0.2,
-        )
+    #     axs[4].errorbar(
+    #         x,
+    #         edge_pre_mean,
+    #         yerr=edge_pre_var,
+    #         label="Predictive model",
+    #         fmt="o-",
+    #         alpha=0.2,
+    #     )
 
-        # 预测，真实，误差值
-        axs[5].errorbar(
-            x,
-            edge_pre_mean,
-            yerr=edge_pre_var,
-            label="Predictive model",
-            fmt="g-",
-            alpha=0.2,
-        )
+    #     # 预测，真实，误差值
+    #     axs[5].errorbar(
+    #         x,
+    #         edge_pre_mean,
+    #         yerr=edge_pre_var,
+    #         label="Predictive model",
+    #         fmt="g-",
+    #         alpha=0.2,
+    #     )
 
-        axs[5].plot(x, edge_tre_y, label="True value", color="orange")
-        axs[5].plot(
-            x,
-            edge_error,
-            label="Error value",
-            color="red",
-        )
+    #     axs[5].plot(x, edge_tre_y, label="True value", color="orange")
+    #     axs[5].plot(
+    #         x,
+    #         edge_error,
+    #         label="Error value",
+    #         color="red",
+    #     )
 
-        plt.show()
+    #     plt.show()
