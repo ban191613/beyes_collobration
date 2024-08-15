@@ -16,6 +16,9 @@ with open("parameters.json", "r") as file:  # 导入参数
 # print(parameters["Initial value of cloud parameters"])
 
 # %%
+
+
+filename = parameters["filename"]
 # 机理模型参数
 
 model_yf = m_model.yf
@@ -91,5 +94,7 @@ cloudEdge = cloud_edge(
     gp_lr=gp_lr,
     active_learning=active_learning,
     active_learning_num=active_learning_num,
+    filename=filename,
 )
 cloudEdge.forward(cloud_iter)
+# runs8

@@ -1,4 +1,5 @@
 import torch
+import random
 from gaussian_process import gaussian_process
 import numpy as np
 
@@ -11,6 +12,7 @@ class Disagreement:
         self.ym = ym
         self.b = b
         self.koh_b = koh_b
+        self.dtype = torch.float64
 
     def compute_sigma(self, basic_data_x, choose_data_x, u):
         """预测分布的最大熵
@@ -62,17 +64,17 @@ class Disagreement:
 
     def conditional_entropy(self, x, u):
         # p(y|x,u)
-        cov = self.koh_b.predict_y_condition_x_u(x, u, self.ym)
+        cov = self.koh_b.predict_y_condition_x_u(x, u)
         entropy = self.calculate_multivariate_gaussian_entropy(cov)
         return entropy
 
     def expectation_conditional_entropy(self, choose_data_x, n=10):
-        # 3  取n个u 请平均
+        #  取n个u 请平均
         arr_u = np.random.multivariate_normal(self.koh_b.mean, self.koh_b.cov, size=n)
         _sum_entropy = torch.zeros((choose_data_x.shape[0], 1))
         for u in arr_u:
             _sum_entropy += self.conditional_entropy(choose_data_x, u)
-        return _sum_entropy / arr_u.shape[0]
+        return _sum_entropy / n
 
     def compute_criteria(self, basic_data_x, choose_data_x, u):
         return self.max_entropy(
@@ -88,8 +90,22 @@ class Disagreement:
         u,
         choose_num: int,
     ):
-        train_data_x = basic_data_x
-        train_data_y = basic_data_y
+        if basic_data_x == None and basic_data_y == None:
+
+            # 生成一个从 0 到 choose_num - 1 之间的随机整数（包括 0 和 choose_num - 1）
+            m_index = random.randint(0, choose_num - 1)
+            train_data_x = choose_data_x[m_index, :].unsqueeze(0)
+            train_data_y = choose_data_y[m_index, :].unsqueeze(0)
+            choose_data_x = torch.cat(
+                (choose_data_x[:m_index, :], choose_data_x[m_index + 1 :, :])
+            )
+            choose_data_y = torch.cat(
+                (choose_data_y[:m_index, :], choose_data_y[m_index + 1 :, :])
+            )
+            choose_num = choose_num - 1
+        else:
+            train_data_x = basic_data_x
+            train_data_y = basic_data_y
         for _ in range(choose_num):
             m_criteria = self.compute_criteria(train_data_x, choose_data_x, u)
             m_index = torch.argmax(m_criteria)

@@ -6,8 +6,8 @@ from edge_koh_b import edge_koh_b
 from torch.utils.tensorboard import SummaryWriter
 
 # from matplotlib import pyplot as plt
-import Disagreement
-import Disagreement_st
+from Disagreement import Disagreement
+from Disagreement_st import Disagreement_st
 
 
 class cloud_edge:
@@ -33,6 +33,7 @@ class cloud_edge:
         gp_lr,
         active_learning,
         active_learning_num,
+        filename,
     ):
         """边云协同整体算法
 
@@ -91,24 +92,33 @@ class cloud_edge:
 
         self.data_set = data_set
 
-        self.active_learning_nums = active_learning_num
-
-        self.edge_active_learning = active_learning
+        self.active_learning_num = active_learning_num
 
         self.JITTER = 1e-4
-        filename = "./runs"
+
+        # tensor board
+
         index = 0
         while os.path.exists(filename + str(index) if index > 0 else filename):
             index = index + 1
         self.writer = SummaryWriter(
             log_dir=(filename + str(index) if index > 0 else filename)
         )
+        self.active_learning = None
+        # 主动学习
+        if active_learning == "Disagreement":
+            self.active_learning = Disagreement(
+                self.cloud_koh.m_gp, self.edge_koh.b_gp, self.edge_koh
+            )
+        elif active_learning == "Disagreement+":
+            self.active_learning = Disagreement_st(
+                self.cloud_koh.m_gp, self.edge_koh.b_gp, self.edge_koh
+            )
 
     def cloud(self):
         self.cloud_koh.data_m(self.cloud_ym)  # 对机理模型进行抽样
         self.cloud_koh.ym_train(iter=self.gp_iter, lr=self.gp_lr)
         (f_x, f_y) = self.data_set.cloud_get()  # 获取数据
-
         self.cloud_koh.yb_train(f_x, f_y, iter=self.gp_iter, lr=self.gp_lr)
         self.cloud_koh.parameter_mcmc()
         # 求后验的参数均值和方差
@@ -122,11 +132,17 @@ class cloud_edge:
         # self.cloud_koh.set_random_walk(cov)
 
         # self.cloud_koh.plot_sample()
-
+        # 设置边缘侧的参数
+        log_length_scale, log_scale, log_beta = self.cloud_koh.get_b_hyperparameter()
+        self.edge_koh.set_b_hyperparameter(log_length_scale, log_scale, log_beta)
         return mean, cov
 
     def edge(self, i: int):
         (f_x, f_y) = self.data_set.edge_get(i)  # 获取数据
+        if self.active_learning and i:
+            f_x, f_y = self.active_learning.acquisition_function(
+                None, None, f_x, f_y, self.edge_koh.mean, self.active_learning_num
+            )
         self.edge_koh.yb_train(
             f_x, f_y, self.cloud_koh.m_gp, iter=self.gp_iter, lr=self.gp_lr
         )
@@ -155,13 +171,6 @@ class cloud_edge:
             if i % cloud_iter == 0:
                 # 云端训练
                 cloud_mean, cloud_cov = self.cloud()  # 云侧执行一次
-                log_length_scale, log_scale, log_beta = (
-                    self.cloud_koh.get_b_hyperparameter()
-                )
-                # 设置边缘侧的参数
-                self.edge_koh.set_b_hyperparameter(
-                    log_length_scale, log_scale, log_beta
-                )
             # 边端训练
             edge_mean, edge_cov = self.edge(i)
 

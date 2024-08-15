@@ -1,13 +1,14 @@
 {
+    "filename":"./runs",
     "parameter dimension": 2,
     "independent variable dimension": 2,
     "number of mechanistic model samples": 200,
-    "open Active Learning": false,
+    "open Active Learning": "Disagreement",
     "number of active learning samples": 10,
-    "Number of device-side data": 30,
+    "Number of device-side data": 40,
     "number of parameter calibration data in the cloud": 100,
-    "number of edge iterations": 20,
-    "number of cloud iterations": 2,
+    "number of edge iterations": 120,
+    "number of cloud iterations":2,
     "Initial value of cloud parameters": [
         0.1,
         0.1
@@ -19,18 +20,18 @@
     ],
     "random_walk": [
         [
-            0.2,
+            0.4,
             0
         ],
         [
             0,
-            0.2
+            0.4
         ]
     ],
     "Number of Monte Carlo samples": 10000,
     "Monte Carlo burn ratio": 0.3,
     "gaussian process iterations": 500,
-    "gaussian process learning rate": 0.1,
+    "gaussian process learning rate": 0.001,
     "prior mean": [
         0.0,
         0.0

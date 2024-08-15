@@ -28,7 +28,7 @@ class edge_koh_b:
         self.dim_u = len(u)
 
         self.b_gp = gaussian_process(dim_x)
-        # self.m_gp = None
+        self.m_gp = None
         self.random_walk = random_walk
         self.mcmc = MetropolisHastings(
             sample_nums=mcmc_sample_nums, random_walk=random_walk, burn_ratio=burn_ratio
@@ -112,8 +112,6 @@ class edge_koh_b:
         self.sample = self.mcmc.sampling(
             u, self.log_parameter_prior, self.negative_log_likelihood
         )
-        self.set_u(np.mean(self.sample, axis=0))
-        self.set_random_walk(np.cov(self.sample, rowvar=False))
 
     def predict(self, x):
 
@@ -129,7 +127,7 @@ class edge_koh_b:
 
         return m_mean, b_mean, m_var, b_var
 
-    def predict_y_condition_x_u(self, x, u, m_gp):
+    def predict_y_condition_x_u(self, x, u):
 
         xu = torch.cat(
             (
@@ -138,7 +136,7 @@ class edge_koh_b:
             ),
             1,
         )
-        (m_mean, m_var) = m_gp(xu)
+        (m_mean, m_var) = self.m_gp(xu)
         (b_mean, b_var) = self.b_gp(x)
 
         return m_var + b_var

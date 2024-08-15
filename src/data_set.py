@@ -54,17 +54,14 @@ class data_set:
             requires_grad=False,
         )
         t = torch.tensor(
-            np.zeros((self.cloud_num + self.device_num * self.edge_iter, 1), dtype=int),
+            np.zeros((self.cloud_num + self.device_num * self.edge_iter), dtype=int),
             requires_grad=False,
         )
         # 产生和数据对应的事件t
         for i in range(self.edge_iter):
-            t[
-                self.cloud_num
-                + i * self.device_num : self.cloud_num
-                + (i + 1) * self.device_num,
-                :,
-            ] = i
+            begin = self.cloud_num + i * self.device_num
+            end = self.cloud_num + (i + 1) * self.device_num
+            t[begin:end] = i
         self.f_y = self.model_yf(self.f_x, t, self.edge_iter)
         # 产生用于预测的数据
         self.pre_f_x = torch.rand(
@@ -72,6 +69,13 @@ class data_set:
             dtype=self.dtype,
             requires_grad=False,
         )
+        # 产生和数据对应的事件t
+        t = torch.tensor(
+            np.zeros((self.edge_iter), dtype=int),
+            requires_grad=False,
+        )
+        for i in range(self.edge_iter):
+            t[i] = i
         self.pre_f_y = self.model_yf(self.pre_f_x, t, self.edge_iter)
 
     def cloud_get(self):
