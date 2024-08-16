@@ -1,12 +1,12 @@
 {
-    "filename":"./runs",
+    "filename":"./c_to_e_al",
     "parameter dimension": 2,
     "independent variable dimension": 2,
     "number of mechanistic model samples": 200,
     "open Active Learning": "Disagreement",
-    "number of active learning samples": 10,
-    "Number of device-side data": 40,
-    "number of parameter calibration data in the cloud": 100,
+    "number of active learning samples": 15,
+    "Number of device-side data": 60,
+    "number of parameter calibration data in the cloud": 150,
     "number of edge iterations": 120,
     "number of cloud iterations":2,
     "Initial value of cloud parameters": [
@@ -31,7 +31,7 @@
     "Number of Monte Carlo samples": 10000,
     "Monte Carlo burn ratio": 0.3,
     "gaussian process iterations": 500,
-    "gaussian process learning rate": 0.001,
+    "gaussian process learning rate": 0.01,
     "prior mean": [
         0.0,
         0.0

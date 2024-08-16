@@ -33,7 +33,7 @@ def yf(x, t, n, mean=0, std=0.1):
         torch.tensor:因变量
     """
     # t=n/2 (0.1 if t >= n / 4 else 0)
-    step_function = torch.where(t >= n / 2, torch.tensor(0.1), torch.tensor(0.0))
+    step_function = torch.where(t >= n / 4, torch.tensor(0.1), torch.tensor(0.0))
     y = (
         0.1
         + 1.5 * torch.sin(x[:, 0] * (1 + 3 * step_function) * math.pi)

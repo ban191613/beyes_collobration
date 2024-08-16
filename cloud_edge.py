@@ -84,6 +84,17 @@ class cloud_edge:
             prior_upper=prior_upper,
             burn_ratio=mcmc_br,
         )
+        self.al_edge_koh = edge_koh_b(  # 边段残差模型初始化
+            dim_x,
+            edge_u,
+            random_walk=random_walk,
+            mcmc_sample_nums=mcmc_sample_num,
+            prior_mean=prior_mean,
+            prior_cov=prior_cov,
+            prior_lower=prior_lower,
+            prior_upper=prior_upper,
+            burn_ratio=mcmc_br,
+        )
 
         self.gp_iter = gp_iter
         self.gp_lr = gp_lr
@@ -94,7 +105,7 @@ class cloud_edge:
 
         self.active_learning_num = active_learning_num
 
-        self.JITTER = 1e-4
+        self.JITTER = 1e-6
 
         # tensor board
 
@@ -108,11 +119,11 @@ class cloud_edge:
         # 主动学习
         if active_learning == "Disagreement":
             self.active_learning = Disagreement(
-                self.cloud_koh.m_gp, self.edge_koh.b_gp, self.edge_koh
+                self.cloud_koh.m_gp, self.al_edge_koh.b_gp, self.al_edge_koh
             )
         elif active_learning == "Disagreement+":
             self.active_learning = Disagreement_st(
-                self.cloud_koh.m_gp, self.edge_koh.b_gp, self.edge_koh
+                self.cloud_koh.m_gp, self.al_edge_koh.b_gp, self.al_edge_koh
             )
 
     def cloud(self):
@@ -135,14 +146,15 @@ class cloud_edge:
         # 设置边缘侧的参数
         log_length_scale, log_scale, log_beta = self.cloud_koh.get_b_hyperparameter()
         self.edge_koh.set_b_hyperparameter(log_length_scale, log_scale, log_beta)
+        self.al_edge_koh.set_b_hyperparameter(log_length_scale, log_scale, log_beta)
         return mean, cov
 
     def edge(self, i: int):
         (f_x, f_y) = self.data_set.edge_get(i)  # 获取数据
-        if self.active_learning and i:
-            f_x, f_y = self.active_learning.acquisition_function(
-                None, None, f_x, f_y, self.edge_koh.mean, self.active_learning_num
-            )
+        # if self.active_learning and i:
+        #     f_x, f_y = self.active_learning.acquisition_function(
+        #         None, None, f_x, f_y, self.edge_koh.mean, self.active_learning_num
+        #     )
         self.edge_koh.yb_train(
             f_x, f_y, self.cloud_koh.m_gp, iter=self.gp_iter, lr=self.gp_lr
         )
@@ -166,6 +178,35 @@ class cloud_edge:
 
         return mean, cov
 
+    def al_edge(self, i: int):
+        (f_x, f_y) = self.data_set.edge_get(i)  # 获取数据
+        if self.active_learning and i:
+            f_x, f_y = self.active_learning.acquisition_function(
+                None, None, f_x, f_y, self.al_edge_koh.mean, self.active_learning_num
+            )
+        self.al_edge_koh.yb_train(
+            f_x, f_y, self.cloud_koh.m_gp, iter=self.gp_iter, lr=self.gp_lr
+        )
+        self.al_edge_koh.parameter_mcmc(
+            self.cloud_koh.cov_m,
+            self.cloud_koh.m_xu,
+            self.cloud_koh.m_y,
+            self.cloud_koh.sigma_m,
+        )
+        # 求后验的参数均值和方差
+        mean = np.mean(self.al_edge_koh.sample, axis=0)
+        cov = np.cov(self.al_edge_koh.sample, rowvar=False) + self.JITTER * np.eye(
+            self.dim_x
+        )
+        self.al_edge_koh.set_u(mean)
+        self.al_edge_koh.set_prior(mean, cov)
+
+        # self.edge_koh.set_random_walk(cov)
+
+        # self.edge_koh.plot_sample()
+
+        return mean, cov
+
     def forward(self, cloud_iter: int):
         for i in range(self.edge_iter):
             if i % cloud_iter == 0:
@@ -173,18 +214,26 @@ class cloud_edge:
                 cloud_mean, cloud_cov = self.cloud()  # 云侧执行一次
             # 边端训练
             edge_mean, edge_cov = self.edge(i)
-
+            al_edge_mean, al_edge_cov = self.al_edge(i)
             # 预测
             self.pre(i)
             # 记录数据 并且画图
             self.writer.add_scalars(
                 "parameter0",
-                {"Edge": edge_mean[0], "Cloud": cloud_mean[0]},
+                {
+                    "Edge": edge_mean[0],
+                    "Al_Edge": al_edge_mean[0],
+                    "Cloud": cloud_mean[0],
+                },
                 i,
             )
             self.writer.add_scalars(
                 "parameter1",
-                {"Edge": edge_mean[1], "Cloud": cloud_mean[1]},
+                {
+                    "Edge": edge_mean[1],
+                    "Al_Edge": al_edge_mean[1],
+                    "Cloud": cloud_mean[1],
+                },
                 i,
             )
         self.writer.close()
@@ -196,6 +245,7 @@ class cloud_edge:
         )
         edge_pre_mean = edge_m_mean + edge_b_mean
         edge_pre_var = edge_m_var + edge_b_var
+
         # 记录数据
         self.writer.add_scalars(
             "prediction",
@@ -211,6 +261,30 @@ class cloud_edge:
         self.writer.add_scalars(
             "prediction_var",
             {"var": edge_pre_var, "m_var": edge_m_var, "b_var": edge_b_var},
+            i,
+        )
+
+        (al_edge_m_mean, al_edge_b_mean, al_edge_m_var, al_edge_b_var) = (
+            self.al_edge_koh.predict(edge_tre_x)
+        )
+        al_edge_pre_mean = al_edge_m_mean + al_edge_b_mean
+        al_edge_pre_var = al_edge_m_var + al_edge_b_var
+
+        # 记录数据
+        self.writer.add_scalars(
+            "al_prediction",
+            {
+                "true": edge_tre_y,
+                "predict": al_edge_pre_mean,
+                "error": edge_tre_y - al_edge_pre_mean,
+                "m_mean": al_edge_m_mean,
+                "b_mean": al_edge_b_mean,
+            },
+            i,
+        )
+        self.writer.add_scalars(
+            "al_prediction_var",
+            {"var": al_edge_pre_var, "m_var": al_edge_m_var, "b_var": al_edge_b_var},
             i,
         )
 
